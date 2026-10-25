@@ -1,11 +1,10 @@
-
 name: Build PengeOverblik
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'PengeOverblik-redesign-1.2.0-*.zip'
+      - 'PengeOverblik-*.zip'
       - '.github/workflows/android-build.yml'
 
 jobs:
@@ -16,13 +15,13 @@ jobs:
       - name: Hent repository
         uses: actions/checkout@v4
 
-      - name: Find og pak redesign ud
+      - name: Pak projektet ud
         shell: bash
         run: |
-          ZIP=$(find . -maxdepth 1 -type f -name 'PengeOverblik-redesign-1.2.0-*.zip' | head -n 1)
+          ZIP=$(find . -maxdepth 1 -type f -name 'PengeOverblik-*.zip' | sort | tail -n 1)
 
           if [ -z "$ZIP" ]; then
-            echo "FEJL: Redesign-ZIP blev ikke fundet."
+            echo "FEJL: Ingen PengeOverblik-ZIP blev fundet."
             exit 1
           fi
 
@@ -32,7 +31,7 @@ jobs:
           ROOT=$(find extracted -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
 
           if [ -z "$ROOT" ]; then
-            echo "FEJL: settings.gradle.kts blev ikke fundet i ZIP-filen."
+            echo "FEJL: Projektet blev ikke fundet i ZIP-filen."
             exit 1
           fi
 
@@ -59,4 +58,3 @@ jobs:
           name: PengeOverblik-APK
           path: extracted/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          
