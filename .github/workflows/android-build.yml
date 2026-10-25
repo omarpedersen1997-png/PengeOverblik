@@ -1,11 +1,10 @@
+
 name: Build PengeOverblik
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'PengeOverblik-redesign-1.2.0-GitHub-klar.zip'
-      - 'PengeOverblik-redesign-1.2.0-uden-ekstra-mappe.zip'
       - 'PengeOverblik-redesign-1.2.0-*.zip'
       - '.github/workflows/android-build.yml'
 
@@ -18,19 +17,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Find og pak redesign ud
+        shell: bash
         run: |
           ZIP=$(find . -maxdepth 1 -type f -name 'PengeOverblik-redesign-1.2.0-*.zip' | head -n 1)
+
           if [ -z "$ZIP" ]; then
-            echo "Redesign-ZIP blev ikke fundet i repositoryets rod."
+            echo "FEJL: Redesign-ZIP blev ikke fundet."
             exit 1
           fi
+
           mkdir -p extracted
           unzip -o "$ZIP" -d extracted
-          ROOT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
+          ROOT=$(find extracted -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
           if [ -z "$ROOT" ]; then
-            echo "Fandt ikke settings.gradle.kts i ZIP-filen."
+            echo "FEJL: settings.gradle.kts blev ikke fundet i ZIP-filen."
             exit 1
           fi
+
           echo "PROJECT_DIR=$ROOT" >> "$GITHUB_ENV"
 
       - name: Konfigurer Java
@@ -39,14 +44,19 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Installer Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
       - name: Byg APK
-        run: |
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: gradle -p "$PROJECT_DIR" assembleDebug
 
       - name: Gem APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: PengeOverblik-APK
           path: extracted/**/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          
