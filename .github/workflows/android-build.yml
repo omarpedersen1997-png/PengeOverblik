@@ -1,44 +1,52 @@
-
 name: Build PengeOverblik
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'PengeOverblik-cloud-build.zip'
+      - 'PengeOverblik-redesign-1.2.0-GitHub-klar.zip'
+      - 'PengeOverblik-redesign-1.2.0-uden-ekstra-mappe.zip'
+      - 'PengeOverblik-redesign-1.2.0-*.zip'
       - '.github/workflows/android-build.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Hent projektet
+      - name: Hent repository
         uses: actions/checkout@v4
 
-      - name: Pak Android-projektet ud
+      - name: Find og pak redesign ud
         run: |
-          unzip -o PengeOverblik-cloud-build.zip -d extracted
-          find extracted -name build.gradle.kts -print
-          cd extracted/PengeOverblik-cloud-build/PengeOverblik
+          ZIP=$(find . -maxdepth 1 -type f -name 'PengeOverblik-redesign-1.2.0-*.zip' | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "Redesign-ZIP blev ikke fundet i repositoryets rod."
+            exit 1
+          fi
+          mkdir -p extracted
+          unzip -o "$ZIP" -d extracted
+          ROOT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          if [ -z "$ROOT" ]; then
+            echo "Fandt ikke settings.gradle.kts i ZIP-filen."
+            exit 1
+          fi
+          echo "PROJECT_DIR=$ROOT" >> "$GITHUB_ENV"
 
-      - name: Installer Java
+      - name: Konfigurer Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Byg APK
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.13'
-      - name: Kompilér appen
         run: |
-          cd extracted/PengeOverblik-cloud-build/PengeOverblik
-          gradle assembleDebug --no-daemon
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Gem APK
         uses: actions/upload-artifact@v4
         with:
           name: PengeOverblik-APK
-          path: extracted/PengeOverblik-cloud-build/PengeOverblik/app/build/outputs/apk/debug/*.apk
-          
+          path: extracted/**/app/build/outputs/apk/debug/*.apk
