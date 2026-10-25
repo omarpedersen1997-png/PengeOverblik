@@ -1,0 +1,44 @@
+
+name: Build PengeOverblik
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'PengeOverblik-cloud-build.zip'
+      - '.github/workflows/android-build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hent projektet
+        uses: actions/checkout@v4
+
+      - name: Pak Android-projektet ud
+        run: |
+          unzip -o PengeOverblik-cloud-build.zip -d extracted
+          find extracted -name build.gradle.kts -print
+          cd extracted/PengeOverblik-cloud-build/PengeOverblik
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Byg APK
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Kompilér appen
+        run: |
+          cd extracted/PengeOverblik-cloud-build/PengeOverblik
+          gradle assembleDebug --no-daemon
+
+      - name: Gem APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PengeOverblik-APK
+          path: extracted/PengeOverblik-cloud-build/PengeOverblik/app/build/outputs/apk/debug/*.apk
+          
