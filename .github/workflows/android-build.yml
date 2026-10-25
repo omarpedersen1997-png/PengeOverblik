@@ -1,10 +1,10 @@
-name: Build PengeOverblik 1.5.0
+name: Build PengeOverblik 2.0.0
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'PengeOverblik-1.5.0-systemnotifikationer.zip'
+      - 'PengeOverblik-2.0.0-fuldt-redesign.zip'
       - '.github/workflows/android-build.yml'
 
 jobs:
@@ -15,13 +15,14 @@ jobs:
       - name: Hent repository
         uses: actions/checkout@v4
 
-      - name: Kontroller ZIP-fil
+      - name: Kontroller og pak ZIP ud
         shell: bash
         run: |
-          ZIP="./PengeOverblik-1.5.0-systemnotifikationer.zip"
+          ZIP="./PengeOverblik-2.0.0-fuldt-redesign.zip"
 
           if [ ! -f "$ZIP" ]; then
-            echo "FEJL: ZIP-filen PengeOverblik-1.5.0-systemnotifikationer.zip mangler i repositoryets øverste mappe."
+            echo "FEJL: PengeOverblik 2.0.0 ZIP-filen blev ikke fundet."
+            echo "Kontroller, at ZIP-filen ligger i repositoryets øverste mappe."
             exit 1
           fi
 
@@ -34,12 +35,12 @@ jobs:
           ROOT=$(find extracted -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
 
           if [ -z "$ROOT" ]; then
-            echo "FEJL: settings.gradle.kts blev ikke fundet i ZIP-filen."
+            echo "FEJL: settings.gradle.kts blev ikke fundet."
             exit 1
           fi
 
           echo "PROJECT_DIR=$ROOT" >> "$GITHUB_ENV"
-          echo "Projekt fundet i: $ROOT"
+          echo "Android-projekt fundet: $ROOT"
 
       - name: Konfigurer Java
         uses: actions/setup-java@v4
@@ -52,13 +53,18 @@ jobs:
         with:
           gradle-version: '8.14.3'
 
-      - name: Byg APK
+      - name: Byg Android APK
         run: gradle -p "$PROJECT_DIR" assembleDebug
 
-      - name: Upload APK
+      - name: Kontroller app-version
+        shell: bash
+        run: |
+          grep -R -n 'versionName' "$PROJECT_DIR/app/build.gradle.kts"
+
+      - name: Upload PengeOverblik 2.0.0 APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: PengeOverblik-1.5.0-APK
+          name: PengeOverblik-2.0.0-APK
           path: extracted/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
